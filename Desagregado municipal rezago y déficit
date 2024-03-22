@@ -1,0 +1,212 @@
+# desagregado por municipio de rezago habitacional, parque habitacional y déficit de viviendas
+
+
+
+# buscar información y base de datos
+
+# REZAGO HABITACIONAL CONAVI 2022 ------------
+
+vivienda_2022 <- read_csv("~/Downloads/enigh2022_ns_viviendas_csv (1).zip")
+View(vivienda_2022) #enigh viviendas 2022
+
+concentradohogar_2022 <- read_csv("~/Desktop/yo_adulta/trabajo/SEDATU/Rezago_Habitacional/Metodologia_rezago_habitacional/01_datos/concentradohogar_2022.csv")
+View(concentradohogar_2022) # enigh concentrado de hogares 2022
+
+
+rezago_habitacional_2022 <- left_join(vivienda_2022, concentradohogar_2022, by = c("folioviv", "ubica_geo", "factor")) %>% 
+  transmute(techos_det = case_when(as.integer(mat_techos) %in% c(1,2,6)~ 1,
+                                   T ~0),
+            pared_det = case_when(as.integer(mat_pared) %in% c(1,2,4,5) ~ 1,
+                                  T ~ 0),
+            mat_det = case_when(techos_det == 0 & pared_det == 0 ~ 0,
+                                techos_det == 1 | pared_det == 1 ~ 1),
+            techos_reg = case_when(as.integer(mat_techos) %in% c(3,4,7,9)~ 1,
+                                   T ~0),
+            pared_reg = case_when(as.integer(mat_pared) %in% c(3,6) ~ 1,
+                                  T ~ 0),
+            pisos_reg = case_when(as.integer(mat_pisos) %in% c(1)~1,
+                                  T~0),
+            mat_reg = case_when(techos_reg == 0 & pared_reg == 0 & pisos_reg == 0 ~ 0,
+                                pared_reg == 1 | techos_reg == 1 | pisos_reg == 1 ~1),
+            res_cuarto = (tot_resid/num_cuarto),
+            hacin = case_when(res_cuarto <= 2.5 ~0,
+                              res_cuarto > 2.5 ~1),
+            excu = case_when(excusado == 1 ~0, 
+                             excusado == 2 ~1),
+            prec_esp = case_when(hacin == 0 & excu == 0 ~0,
+                                 hacin == 1 | hacin == 1 ~1),
+            rezago = case_when(mat_det == 0 & mat_reg == 0 & prec_esp == 0 ~0,
+                               mat_det == 1 | mat_reg == 1 | prec_esp == 1~1),
+            factor = factor,
+            ubicageo = ubica_geo) %>% 
+  select(rezago, factor, ubicageo)
+
+# Desglosado por municipio
+
+rez_sin_NA <- rezago_habitacional_2022[complete.cases(rezago_habitacional_2022),]
+
+#importar municipios
+
+munis <- read_excel("~/Desktop/yo_adulta/trabajo/SEDATU/prueba_1/01_datos/munis.xlsx", 
+                    col_types = c("text", "text")) #base de datos con la clave municipal y de la entidad (0#0##)
+View(munis)
+
+tabulado_rezago_1 <- rez_sin_NA %>% 
+  mutate(rezago = rezago*factor,
+             cve_mun = ubicageo,
+             entidad  = substr(cve_mun, 1, 2),
+             cod_mun = substr(cve_mun, nchar(cve_mun)-2, nchar(cve_mun))) %>% 
+  select(cve_mun, entidad, cod_mun, rezago) %>% 
+  left_join(munis, by = "cve_mun") %>% 
+  group_by(cve_mun, entidad, cod_mun, municipio) %>% 
+  summarise(tot_rezago = sum(rezago))
+
+print(tabulado_rezago_1)
+
+#Exportar a excel
+
+rezago_tabla <- "/Users/ximena/Desktop/yo_adulta/trabajo/SEDATU/Rezago_Habitacional/tablas/rezago_hab_conavi_2.xlsx"
+
+write.xlsx(tabulado_rezago_1, file = rezago_tabla, rowNames = FALSE)
+
+
+# REZAGO HABITACIONAL CONAVI 2020 ------------
+
+#exportar bases de 2020
+
+viviendas_2020 <- read_csv("~/Desktop/yo_adulta/trabajo/SEDATU/Rezago_Habitacional/Metodologia_rezago_habitacional/01_datos/viviendas_2020.csv")
+View(viviendas_2020)
+
+concentradohogar_2020 <- read_csv("~/Desktop/yo_adulta/trabajo/SEDATU/Rezago_Habitacional/Metodologia_rezago_habitacional/01_datos/concentradohogar_2020.csv")
+View(concentradohogar_2020)
+
+rezago_habitacional_2020 <- left_join(viviendas_2020, concentradohogar_2020, by = c("folioviv", "ubica_geo", "factor")) %>% 
+  transmute(techos_det = case_when(as.integer(mat_techos) %in% c(1,2,6)~ 1,
+                                   T ~0),
+            pared_det = case_when(as.integer(mat_pared) %in% c(1,2,4,5) ~ 1,
+                                  T ~ 0),
+            mat_det = case_when(techos_det == 0 & pared_det == 0 ~ 0,
+                                techos_det == 1 | pared_det == 1 ~ 1),
+            techos_reg = case_when(as.integer(mat_techos) %in% c(3,4,7,9)~ 1,
+                                   T ~0),
+            pared_reg = case_when(as.integer(mat_pared) %in% c(3,6) ~ 1,
+                                  T ~ 0),
+            pisos_reg = case_when(as.integer(mat_pisos) %in% c(1)~1,
+                                  T~0),
+            mat_reg = case_when(techos_reg == 0 & pared_reg == 0 & pisos_reg == 0 ~ 0,
+                                pared_reg == 1 | techos_reg == 1 | pisos_reg == 1 ~1),
+            res_cuarto = (tot_resid/num_cuarto),
+            hacin = case_when(res_cuarto <= 2.5 ~0,
+                              res_cuarto > 2.5 ~1),
+            excu = case_when(excusado == 1 ~0, 
+                             excusado == 2 ~1),
+            prec_esp = case_when(hacin == 0 & excu == 0 ~0,
+                                 hacin == 1 | hacin == 1 ~1),
+            rezago = case_when(mat_det == 0 & mat_reg == 0 & prec_esp == 0 ~0,
+                               mat_det == 1 | mat_reg == 1 | prec_esp == 1~1),
+            factor = factor,
+            ubicageo = ubica_geo) %>% 
+  select(rezago, factor, ubicageo)
+
+# Desglosado por municipio
+
+rez_sin_NA_2020 <- rezago_habitacional_2020[complete.cases(rezago_habitacional_2020),]
+
+#importar municipios
+
+munis <- read_excel("~/Desktop/yo_adulta/trabajo/SEDATU/prueba_1/01_datos/munis.xlsx", 
+                    col_types = c("text", "text"))
+View(munis)
+
+tabulado_rezago_2 <- rez_sin_NA_2020 %>% 
+  mutate(rezago = rezago*factor,
+         cve_mun = ubicageo,
+         entidad  = substr(cve_mun, 1, 2),
+         cod_mun = substr(cve_mun, nchar(cve_mun)-2, nchar(cve_mun))) %>% 
+  select(cve_mun, entidad, cod_mun, rezago) %>% 
+  left_join(munis, by = "cve_mun") %>% 
+  group_by(cve_mun, entidad, cod_mun, municipio) %>% 
+  summarise(tot_rezago = sum(rezago))
+
+print(tabulado_rezago_3)
+
+
+#Exportar a excel
+
+rezago_tabla_2 <- "/Users/ximena/Desktop/yo_adulta/trabajo/SEDATU/Rezago_Habitacional/tablas/rezago_hab_conavi_2020.xlsx"
+
+write.xlsx(tabulado_rezago_2, file = rezago_tabla_2, rowNames = FALSE)
+
+
+
+# DÉFICIT DE VIVIENDA -------------
+
+#exportar base de datos 
+# empezar con el código
+
+#la base de la envi no viene por municipio entonces se junta con el censo del mismo año:
+
+hogar_envi <- read_csv("~/Desktop/yo_adulta/trabajo/SEDATU/Rezago_Habitacional/Metodologia_rezago_habitacional/01_datos/envi_2020_base_de_datos_csv/Bases de datos/THOGAR.csv")
+View(hogar_envi) #la base que se llame THOGAR de la envi es la q usaremos
+
+demanda <- hogar_envi%>% 
+  mutate(p3a1_2 = as.numeric(P3A1_2),
+         factor = as.numeric(FACTOR),
+         total_poblacion_viviendas = p3a1_2*factor,
+         entidad = str_pad(ENT, width = 2, pad = "0", side = "left")) %>% 
+  select(entidad, total_poblacion_viviendas) %>% 
+  group_by(entidad) %>% 
+  summarise(demanda_estatal = sum(total_poblacion_viviendas, na.rm = T))
+
+#Importar censo 
+
+censo_viv <- read_csv("~/Desktop/yo_adulta/trabajo/SEDATU/prueba_1/01_datos/viviendas.csv")
+View(censo_viv) #censo -- la parte de la encuenta que se enfoca en vivienda
+
+tot_viviendas <- censo_viv %>% 
+  select(ENTIDAD, MUN, VIVTOT) %>% 
+  filter(MUN != 0,
+         ENTIDAD != 0)
+
+vivienda_limpia <- tot_viviendas %>% 
+  transmute(cve_mun = paste0(str_pad(ENTIDAD, width = 2, pad = "0", side = "left"),
+                             str_pad(MUN, width = 3, pad = "0", side = "left")),
+            entidad = str_pad(ENTIDAD, width = 2, pad = "0", side = "left"),
+            viv_total = VIVTOT) %>% 
+  group_by(entidad) %>% 
+  summarise(vivienda_estatal = sum(viv_total))
+
+
+coeficientes_estado <- vivienda_limpia %>% 
+  left_join(demanda, by = "entidad") %>% 
+  mutate(coef_deficit_total = (demanda_estatal/vivienda_estatal))
+
+library(readxl)
+munis_con <- read_excel("~/Desktop/yo_adulta/trabajo/SEDATU/prueba_1/01_datos/munis.xlsx")
+View(munis_con) 
+
+#municipio = as.numeric(substr(ubicageo, nchar(ubicageo)-2, nchar(ubicageo))),
+
+mun_deficit <- tot_viviendas %>% 
+  transmute(cve_mun = paste0(str_pad(ENTIDAD, width = 2, pad = "0", side = "left"),
+                             str_pad(MUN, width = 3, pad = "0", side = "left")),
+            entidad = str_pad(ENTIDAD, width = 2, pad = "0", side = "left"),
+            viv_total = VIVTOT) %>% 
+  group_by(cve_mun) %>% 
+  summarise(vivienda_mun = sum(viv_total)) %>% 
+  mutate(entidad  = substr(cve_mun, 1, 2),
+         cod_mun = substr(cve_mun, nchar(cve_mun)-2, nchar(cve_mun))) %>% 
+  left_join(coeficientes_estado, by = "entidad") %>% 
+  mutate(def_vivienda = (vivienda_mun*coef_deficit_total)) %>% 
+  left_join(munis_con, by = "cve_mun") %>% 
+  select(cve_mun, entidad, cod_mun, municipio, vivienda_mun, def_vivienda)
+
+print(mun_deficit)
+
+#vemos a partir de aquí
+
+deficit_tabla <- "/Users/ximena/Desktop/yo_adulta/trabajo/SEDATU/Rezago_Habitacional/tablas/def_habitacional.xlsx"
+
+write.xlsx(mun_deficit, file = deficit_tabla, rowNames = FALSE)
+
+
